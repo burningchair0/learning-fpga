@@ -22,11 +22,19 @@ module adc_capture
 
 	logic clk2;
 	always_ff @(posedge clk or posedge rst) begin
-
+		
 		if (rst) begin
 			sclk <= 1'd0;
 			clk2 <= 1'd0;
-			frdiv <= 'd0;
+			frdiv <= 'd0;					// Resetting all regs (not inputs except dout_bit)
+			adc_ready <= 1'd0;
+			ctl_valid0 <= 1'd1;
+
+			cs_reg <= 5'd0;
+			cs_pause <= 'd0;				// ATTEMPT TO FIX MULTIPLE EDGE SENSITIVITY FOR CS
+			cs <= 1'd0;
+
+			dout <= 16'd0;
 		end else begin
 			if (frdiv >= MAX_DIV) begin
 				clk2 <= ~clk2;
@@ -63,21 +71,21 @@ module adc_capture
 		end	
 	end
 
-	always_ff @(posedge clk2 or posedge rst) begin
-
+	always_ff @(posedge clk2/* or posedge rst*/) begin
+		/*
 		if (rst) begin						// Resetting all regs (not inputs except dout_bit)
 
 			adc_ready <= 1'd0;
 
 			cs_reg <= 5'd0;
-			cs_pause <= 'd0;
+			cs_pause <= 'd0;				// ATTEMPT TO FIX MULTIPLE EDGE SENSITIVITY FOR CS
 			cs <= 1'd0;
 
 			dout <= 16'd0;
-						
-		end else begin
-		
-			if (cs == 1'd0) begin				// Performing single work cycle (cs = 1)
+		*/
+		if (ctl_valid && ~adc_ready) begin		// work cycle
+			
+			if (cs == 1'd0) begin					// Performing single work cycle (cs = 1)
 
 				dout[15:0] <= {dout[14:0], dout_bit};	// Recieving MSB from ADC DOUT and shifting it to the left (0000 + d_signal) 
 
